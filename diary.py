@@ -79,7 +79,7 @@ from collections import defaultdict
 task = defaultdict(dict)
 for d in intervals:
     if d['comment']:
-        task[d['comment']]['Group'] = dict_type[d['type']['guid']][1]
+        task[d['comment']]['Group'] = dict_type[d['type']['guid']][1] if dict_type[d['type']['guid']][1] else dict_type[d['type']['guid']][0]
         if "Time" in task[d['comment']].keys():
             task[d['comment']]['Time'] += (d['to'] - d['from'])
             task[d['comment']]['N'] += 1
@@ -122,6 +122,8 @@ rows = ""
 for task in task_list:
     row = row_template
     for item in task:
+        # "&" will cause error when parsing HTML to create note
+        item = str(item).replace("&", "&amp;")
         row = row.replace('<br/>', item, 1)
     rows += row
 rows
