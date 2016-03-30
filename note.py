@@ -3,9 +3,21 @@ from evernote.api.client import EvernoteClient
 import binascii
 import hashlib
 from analysis import LEVEL2STR
+from time_func import ts2datetime
+import re
 
 DIARY = "c0e4e8e9-465f-4ebc-9053-88878e09eedf"
 REVIEW = '17caf5bc-7295-4e55-ac16-3d291f587946'
+DAILY_TAG = """<div>
+    <ul style="list-style-type: none; padding: 0; margin: 0 0 10px 0;">
+        <li style="background-color: #444444; color: #eeeeee; font-weight: bold; display: inline; padding: 3px 6px 3px 6px; margin-right: 12px;">Y%Y</li>
+        <li style="background-color: #444444; color: #eeeeee; font-weight: bold; display: inline; padding: 3px 6px 3px 6px; margin-right: 12px;">M%m</li>
+        <li style="background-color: #444444; color: #eeeeee; font-weight: bold; display: inline; padding: 3px 6px 3px 6px; margin-right: 12px;">D%d</li>
+        <li style="background-color: #444444; color: #eeeeee; font-weight: bold; display: inline; padding: 3px 6px 3px 6px; margin-right: 12px;">W%V</li>
+        <li style="background-color: #444444; color: #eeeeee; font-weight: bold; display: inline; padding: 3px 6px 3px 6px; margin-right: 12px;">DY%j</li>
+        <li style="background-color: #444444; color: #eeeeee; font-weight: bold; display: inline; padding: 3px 6px 3px 6px; margin-right: 12px;">WD%a</li>
+    </ul>
+</div>"""
 
 
 def get_note_token():
@@ -79,7 +91,7 @@ def connect_note():
 
 def create_note(auth_token, note_store, level, note_title,
                 resources=None, headings=None, widths=None,
-                intro=None, ending=None):
+                tag=None, intro=None, ending=None):
     """
     Create note in Evernote.
     :param auth_token: development token.
@@ -89,6 +101,7 @@ def create_note(auth_token, note_store, level, note_title,
     :param resources: (list) resources (images) add into note.
     :param headings: (list) headers for images.
     :param widths: (list) width of image.
+    :param tag: (str) a div contain list of tags for future search.
     :param intro: (str) Some text add before all images.
     :param ending: (str) Other title add after all images.
     :return: note.
@@ -101,6 +114,8 @@ def create_note(auth_token, note_store, level, note_title,
     note_body = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
     note_body += "<!DOCTYPE en-note SYSTEM \"http://xml.evernote.com/pub/enml2.dtd\">"
     note_body += "<en-note>"
+    if tag is not None:
+        note_body += tag
     if intro is not None:
         note_body = note_body + intro + '<br /><br />'
     if resources:
@@ -126,9 +141,11 @@ def create_note(auth_token, note_store, level, note_title,
     return note
 
 
-def find_notebook_guid(notebook):
+def find_notebook_guid(auth_token, note_store, notebook):
     """
     Find guid for notebook in Evernote.
+    :param auth_token: development token.
+    :param note_store: note store object.
     :param notebook: (str) notebook name.
     :return: (list) all guid satisfied with search.
     """
@@ -159,3 +176,56 @@ def find_note(keywords):
     our_note_list = note_store.findNotesMetadata(dev_token, search, 0, 100, spec)
     note_content = note_store.getNoteContent(dev_token, our_note_list.notes[0].guid)
     return note_content
+
+
+def create_tag(tag_list):
+    """
+    Create tags like element for notes from tag list.
+    :param tag_list: a list of tag string.
+    :return: (str) html for tags.
+    """
+    tag_span = """<span style="background-color: gainsboro; color: dimgray; font-weight: bold; font-size:90%;padding: 3px 8px; border-radius: 12px;white-space:nowrap;">{0}</span>&nbsp;&nbsp;"""
+    tag_div_start = """<div style="margin:0px 0 7px 0;">"""
+    tag_div_end = """</div>"""
+    result = tag_div_start
+    for tag in tag_list:
+        result += tag_span.format(tag)
+    result += tag_div_end
+    return result
+
+
+def date_tag(timestamp, level, tzinfo='US/Eastern'):
+    """
+    Create tags element for notes.
+    :param timestamp: unix start time of the date.
+    :param level: (int) time frame number.
+    :param tzinfo: time zone.
+    :return: (str) html tags.
+    """
+    date_time = ts2datetime(timestamp, tzinfo)
+    tag_list = None
+    if level == 0:
+        tag_list = date_time.strftime('Y%Y,M%m,D%d,W%V,DY%j,WD%a').split(",")
+    elif level == 1:
+        tag_list = date_time.strftime('Y%Y,W%V').split(",")
+    elif level == 2:
+        tag_list = date_time.strftime('Y%Y,M%m').split(",")
+    tag_html = create_tag(tag_list)
+    return tag_html
+
+
+def insert_tag(tag_list, note):
+    """
+    Insert tags into beginning of note content.
+    :param tags: (list) list of tags.
+    :param note: (note) an Evernote note object.
+    :return: (note) note with new content.
+    """
+    tags = create_tag(tag_list)
+    content = note.content
+    m = re.search('.*<en-note[^>]*>', content, re.DOTALL)
+    end = m.end()
+    part_1, part_2 = content[:end], content[end:]
+    new_content = part_1 + tags + part_2
+    note.content = new_content
+    return note

@@ -157,7 +157,8 @@ def group_pie_plot(data):
     fig.savefig('img/group_pie', dpi=200)
 
 
-def agg_line_plot(agg_data, cate, level, fmla='Sum', lst=None, smooth=True):
+def agg_line_plot(agg_data, cate, level, fmla='Sum',
+                  lst=None, smooth=True, end=None):
     """
     Plot aggregated line plot for groups or types, save in png file.
     :param agg_data: (dataframe) aggregated data according to time frame.
@@ -166,9 +167,11 @@ def agg_line_plot(agg_data, cate, level, fmla='Sum', lst=None, smooth=True):
     :param fmla: (str) name of statistics in AGG_DICT.
     :param lst: (list) name of types or groups
     :param smooth: (bool) use Lowess smoothing or not.
+    :param end: use when end is not correct for higher levels.
     """
     start = str2level_range(agg_data['date'].values[0], level)[0]
-    end = str2level_range(agg_data['date'].values[-1], level)[1]
+    if end is None:
+        end = str2level_range(agg_data['date'].values[-1], level)[1]
     if lst is None:
         if cate == 'type':
             lst = agg_data.type.unique()
@@ -182,7 +185,14 @@ def agg_line_plot(agg_data, cate, level, fmla='Sum', lst=None, smooth=True):
 
     for ind, item in enumerate(lst):
         data = agg_data[agg_data[cate] == item]
-        y = data[fmla].map(lambda value: value / SEC_HOUR)
+        if fmla == 'Day Avg':
+            y = data['Sum'].map(lambda value: value / SEC_HOUR)
+            days_list = get_days_of_month(start, end)
+            y = y / days_list
+        elif fmla == 'Num':
+            y = data['Num']
+        else:
+            y = data[fmla].map(lambda value: value / SEC_HOUR)
         if smooth:
             x = np.arange(len(y))
             lowess = sm.nonparametric.lowess(y, x, frac=1 / data.shape[0] ** 0.5)
@@ -258,7 +268,7 @@ def type_barh_plot(ax, data, group, level):
     x_ax = get_datelist(start, end, level)
     types = data.sort_values(by=['order']).type.unique()
     palette = get_palette()
-    # fig, ax = plt.subplots(1, figsize=(5, 5))
+    # fig, ax = plt.subplots(1, figsize=(15, 5))
     bottom = np.zeros(len(x_ax))
     width = bar_width(level)
     patch_handles = []
@@ -291,8 +301,8 @@ def type_barh_plot(ax, data, group, level):
     # ax.set_xlim(0, tallest_bar*1.05)
     ax.legend(loc='lower left', bbox_to_anchor=(-0.03, -0.23),
               prop={'size': 10, 'weight': 'bold'}, handletextpad=0.2, ncol=7)
-    ax.set_title(group, fontdict={'fontweight': 'bold', 'fontsize': 13})
-    # fig.savefig('img/type_bar', bbox_inches='tight', dpi=200)
+    # ax.set_title(group, fontdict={'fontweight': 'bold', 'fontsize': 13})
+    # fig.savefig('img/type_bar_{0}'.format(group), bbox_inches='tight', dpi=200)
 
 
 def type_bar_grid_plot(data, level):
@@ -312,7 +322,6 @@ def type_bar_grid_plot(data, level):
         else:
             type_data = type_data.merge(type_order)
             type_barh_plot(ax, type_data, group, level)
-    # fig.set_tight_layout(True)
     fig.subplots_adjust(wspace=0.1, hspace=0.4)
     fig.savefig('img/type_bar_grid', bbox_inches='tight', dpi=200)
 

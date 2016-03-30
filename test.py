@@ -48,7 +48,7 @@ def rebuild_db(op='truncate'):
     if op == 'truncate':
         empty_db()
     else:
-        empty_db(op)
+        empty_db(op=op)
         create_all_tables()
     time_token = get_time_token()
     types = get_types(time_token)
@@ -69,9 +69,11 @@ def daily_report(date=None):
         start, end = str2level_range(date, 0)
         date_info = day_info(date)
     else:
+        # TODO Replace human_qr with str2level_range
         start, end = human_qr('last 1 days')
         date_info = day_info()
     title = ts2str_level(start, 0)
+    tags = date_tag(start, 0)
     sleep_table_plot(sleep_compare(date))
     last_cut = get_cut_level_dataframe(start, end, 0)
     group_pie_plot(last_cut)
@@ -90,7 +92,7 @@ def daily_report(date=None):
         headings = ['1. Good Morning!', '2. What\'s up?']
         widths = [500, None]
     # create_daily_note(dev_token, note_store, title, date_info, resources, headings, widths)
-    create_note(dev_token, note_store, 0, title, resources, headings, widths, date_info)
+    create_note(dev_token, note_store, 0, title, resources, headings, widths, tags, date_info)
     mysql_switch(0)
     print "Generate daily report for {0}!".format(title)
 
@@ -105,10 +107,12 @@ def weekly_report(week=None):
     if week:
         start, end = str2level_range(week, 1)
     else:
-        start, end = human_qr('last 1 week')
+        now = arrow.get(datetime.now(), 'US/Eastern')
+        start, end = str2level_range(now.strftime('%YW%V'), 1)
     start_date = ts2datetime(start).strftime('%b %d')
-    end_date = ts2datetime(end).strftime('%b %d')
+    end_date = ts2datetime(end-1).strftime('%b %d')
     title = ts2datetime(start).strftime("%Y Week%V ({0} - {1})".format(start_date, end_date))
+    tags = date_tag(start, 1)
 
     cut_data = get_cut_dataframe(start, end)
     group_pie_plot(cut_data)
@@ -127,7 +131,7 @@ def weekly_report(week=None):
     headings = ['1. Group Overview', '2. Type Detail', '3. Group Trends', '4. Type Trends', '5. Sleep Trends']
     widths = [None] * 5
     # create_weekly_note(dev_token, note_store, title, resources, headings, widths)
-    create_note(dev_token, note_store, 1, title, resources, headings, widths)
+    create_note(dev_token, note_store, 1, title, resources, headings, widths, tags)
     mysql_switch(0)
     print "Generate weekly report for {0}!".format(title)
 
@@ -142,8 +146,12 @@ def monthly_report(month=None):
     if month:
         start, end = str2level_range(month, 2)
     else:
-        start, end = human_qr('last 1 month')
-    title = ts2datetime(start).strftime("%Y Month%m")
+        now = arrow.get(datetime.now(), 'US/Eastern')
+        start, end = str2level_range(now.strftime('%YM%m'), 2)
+    start_week = ts2datetime(start).strftime('%V')
+    end_week = ts2datetime(end-1).strftime('%V')
+    title = ts2datetime(start).strftime("%Y Month%m (W{0} - W{1})".format(start_week, end_week))
+    tags = date_tag(start, 2)
 
     cut_data = get_cut_dataframe(start, end)
     group_pie_plot(cut_data)
@@ -161,7 +169,7 @@ def monthly_report(month=None):
                                   'img/type_bar_grid.png', 'img/sleep_plot.png'])
     headings = ['1. Group Overview', '3. Type Detail', '2. Group Trends', '4. Type Trends', '5. Sleep Trends']
     widths = [None] * 5
-    create_note(dev_token, note_store, 2, title, resources, headings, widths)
+    create_note(dev_token, note_store, 2, title, resources, headings, widths, tags)
     mysql_switch(0)
     print "Generate monthly report for {0}!".format(title)
 
@@ -183,7 +191,7 @@ def gen_report(level=0, date=None):
 def test_func():
     """Test function"""
     mysql_switch(1)
-    start, end = human_qr('last 1 week')
+    # start, end = human_qr('last 1 week')
     # cut_data = get_cut_dataframe(start, end)
     # group_pie_plot(cut_data)
     # day_cut_data = get_cut_day_dataframe(start, end)
@@ -194,8 +202,9 @@ def test_func():
     # sleep_plot(sleep_data)
     # agg_data = agg_level(start, end, 'group', 0)
     # group_barh_plot(agg_data, 0)
-    agg_data = agg_level(start, end, 'type', 0)
-    type_bar_grid_plot(agg_data, 0)
+    # agg_data = agg_level(start, end, 'type', 0)
+    # type_bar_grid_plot(agg_data, 0)
+    weekly_report("2015W48")
     mysql_switch(0)
 
 

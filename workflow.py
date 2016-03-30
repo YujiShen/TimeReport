@@ -25,14 +25,14 @@ xml += day
 
 week = """<item uid="week" arg="{0}" valid="YES" autocomplete="Weekly Report">
     <title>Weekly Report</title>
-    <subtitle>Default: Last week. --WEEK, e.g. 2015W05</subtitle>
+    <subtitle>Default: This week. --WEEK, e.g. 2015W05</subtitle>
     <icon>week.png</icon>
   </item>""".format(cmd_week)
 xml += week
 
 month = """<item uid="month" arg="{0}" valid="YES" autocomplete="Monthly Report">
     <title>Monthly Report</title>
-    <subtitle>Default: Last month. --MONTH, e.g. 2015M01</subtitle>
+    <subtitle>Default: This month. --MONTH, e.g. 2015M01</subtitle>
     <icon>month.png</icon>
   </item>""".format(cmd_month)
 xml += month

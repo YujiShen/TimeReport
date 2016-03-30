@@ -1,0 +1,10 @@
+*.pyc
+/img/
+/arc/
+/io.timetrack.timetrack-io-osx/
+*.ofocus/
+pass.txt
+/.idea/
+yearly.py
+experiment.py
+applescript.py

@@ -79,6 +79,7 @@ def get_type_detail(data):
     :return: (dataframe)
     """
     types = get_all_types()
+    # Not using start, end in case of end have not happened yet
     days = len(get_datelist(data['from'].values[0], data.to.values[-1], 0))
     result = data.groupby(['group', 'type'])['delta'].agg(AGG_DICT)
 

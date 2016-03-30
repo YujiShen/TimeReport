@@ -7,7 +7,7 @@ SEC_HOUR = 60 * 60.
 SEC_DAY = SEC_HOUR * 24
 STR2LEVEL = {"days": 0, "weeks": 1, "months": 2}
 LEVEL2STR = {0: "days", 1: "weeks", 2: "months"}
-
+# TODO Build TZINFO global parameter
 
 def fmt_cal_str(cal_string):
     """
@@ -114,9 +114,18 @@ def str2level_range(date_string, level, tzinfo='US/Eastern'):
     elif level == 1:
         start = parse_week_number(date_string, tzinfo).timestamp
     elif level == 2:
-        start = arrow.get(datetime.strptime(date_string, '%YM%m'), tzinfo).timestamp
+        return week_of_month(date_string, tzinfo)
     end = ts2datetime(start, tzinfo=tzinfo).replace(**replace_arg).timestamp
     return start, end
+
+
+def week_of_month(month_str, tzinfo='US/Eastern'):
+    year, month = month_str.split('M')
+    # every 4th of that month will in the first week for that month
+    month_4th = arrow.get(year+month+"04", "YYYYMMDD", tzinfo=tzinfo)
+    week_start = month_4th.floor('week').timestamp
+    week_end = month_4th.replace(months=+1).replace(weeks=-1).ceil('week').timestamp+1
+    return week_start, week_end
 
 
 def ts2datetime(timestamp, tzinfo='US/Eastern'):
@@ -300,3 +309,12 @@ def break_level(start, end, level, tzinfo='US/Eastern'):
                 break_points.append(point)
     break_points = [x.timestamp for x in break_points]
     return break_points
+
+
+def get_days_of_month(start, end):
+    ts_list = [start] + break_level(start, end, 2) + [end]
+    date_list = map(lambda x: ts2date(x), ts_list)
+    days_list = []
+    for n in range(len(date_list)-1):
+        days_list.append((date_list[n+1]-date_list[n]).days)
+    return days_list
