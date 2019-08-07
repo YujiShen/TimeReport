@@ -10,8 +10,8 @@ import argparse
 def update_db():
     """Insert last two days' entries in aTimeLogger into database."""
     mysql_switch(1)
-    time_token = get_time_token()
-    new_entries = get_new_intervals(time_token)
+    auth_header = get_auth_header()
+    new_entries = get_new_intervals(auth_header)
     insert_intervals(new_entries)
     mysql_switch(0)
     print "Update complete!"
@@ -25,14 +25,14 @@ def rebuild_table(table):
     """
     empty_db(table)
     mysql_switch(1)
-    time_token = get_time_token()
+    auth_header = get_auth_header()
     echo = 'Please correct your table name!'
     if table == 'types':
-        types = get_types(time_token)
+        types = get_types(auth_header)
         insert_types(types)
         echo = "Rebuild types complete!"
     elif table == 'intervals':
-        intervals = get_all_intervals(time_token)
+        intervals = get_all_intervals(auth_header)
         insert_types(intervals)
         echo = "Rebuild intervals complete!"
     mysql_switch(0)
@@ -50,9 +50,9 @@ def rebuild_db(op='truncate'):
     else:
         empty_db(op=op)
         create_all_tables()
-    time_token = get_time_token()
-    types = get_types(time_token)
-    intervals = get_all_intervals(time_token)
+    auth_header = get_auth_header()
+    types = get_types(auth_header)
+    intervals = get_all_intervals(auth_header)
     insert_all(types, intervals)
     mysql_switch(0)
     print "Rebuild database complete!"
